@@ -24,6 +24,20 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>NSCameraUsageDescription</key>
+	<string>to take photos</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>to access microphone</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>to access media library</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>to add photos to your library</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>to access your library</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>to add your location</string>
+	<key>NSLocationUsageDescription</key>
+	<string>to describe your location</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
