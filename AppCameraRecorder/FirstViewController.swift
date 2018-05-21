@@ -148,6 +148,9 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
             currentFilter.setValue(CIVector(x: currentImage.size.width / 2, y: currentImage.size.height / 2), forKey: kCIInputCenterKey)
             slider.isHidden = false
         }
+        else {
+            slider.isHidden = true
+        }
         
         if let cgimg = context.createCGImage(currentFilter.outputImage!, from: currentFilter.outputImage!.extent) {
             let processedImage = UIImage(cgImage: cgimg)

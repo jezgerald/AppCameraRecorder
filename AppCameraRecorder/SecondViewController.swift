@@ -70,23 +70,39 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         // trying to extract URL to be used elsewhere
 //        self.videoURL = url as NSURL
         
-        // trying to create a way to view the video on the main screen before saving
-        let player = AVPlayer(url: url)
-        let vcPlayer = AVPlayerViewController()
-        vcPlayer.player = player
-        vcPlayer.showsPlaybackControls = true
-        let playerLayer = AVPlayerLayer(player: player)
-        playerLayer.frame = self.view.bounds
-        self.view.layer.addSublayer(playerLayer)
-        self.present(vcPlayer, animated: true, completion: nil)
-        player.play()
-        
         // dismisses view controller
         picker.presentingViewController?.dismiss(animated: true)
         
-        // saves video to Photo Library
-        UISaveVideoAtPathToSavedPhotosAlbum(url.path, self, #selector(video(_:didFinishSavingWithError:contextInfo:)), nil)
-        saveNotice()
+        //playVideo()
+        
+        let player = AVPlayer(url: url)
+//        let playerLayer = AVPlayerLayer(player: player)
+//        playerLayer.frame = videoPicked.frame
+//        self.view.layer.addSublayer(playerLayer)
+//        player.play()
+
+        let playerViewController = AVPlayerViewController()
+        playerViewController.player = player
+        self.present(playerViewController, animated: true) {
+            playerViewController.player!.play()
+        }
+        
+//        let vcPlayer = AVPlayerViewController()
+//        vcPlayer.player = player
+//        vcPlayer.showsPlaybackControls = true
+//        self.present(vcPlayer, animated: true, completion: nil)
+        
+        
+        // saves video to Photo Library - includes alert message
+//        UISaveVideoAtPathToSavedPhotosAlbum(url.path, self, #selector(video(_:didFinishSavingWithError:contextInfo:)), nil)
+        
+    }
+    
+    // trying to create a way to view the video on the main screen before saving
+    func playVideo() {
+
+//        UIVideoEditorController
+
     }
     
     // trying to add code to play the video
@@ -115,7 +131,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         destination.player = AVPlayer(url: url! as URL)
     }
     
-    // video function required to save video
+    // video function - required to save video
     @objc func video(_ videoPath: String, didFinishSavingWithError error: Error?, contextInfo info: AnyObject) {
         let title = (error == nil) ? "Success" : "Error"
         let message = (error == nil) ? "Video was saved" : "Video failed to save"
@@ -169,7 +185,8 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     @IBAction func share(_ sender: UIButton) {
         
         // to choose the image already showing
-        let video = videoPicked.image
+        //let video = videoPicked.image
+        let video = playerController.player
         
         // share options only show if an image has been chosen/taken
         if video != nil {
