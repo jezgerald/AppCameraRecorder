@@ -23,7 +23,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     
     var soundRecorder = AVAudioRecorder()
     var soundPlayer = AVAudioPlayer()
-    var videoURL: NSURL?
+    var videoURL: URL?
     let playerController = AVPlayerViewController()
     
     // button to record video
@@ -51,87 +51,46 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         }
     }
     
-    // save video to library
-    @IBAction func saveButton(_ sender: UIButton) {
-        
-    }
-    
-    
-    // finish and close the video
+    // finish recording and close the video
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
 
+        // video URL
+        videoURL = info[UIImagePickerControllerMediaURL] as! URL?
+        
+        // export video as movie type, update URL, and ensure compatibility with user's Photo Library
         guard
             let mediaType = info[UIImagePickerControllerMediaType] as? String,
             mediaType == (kUTTypeMovie as String),
-            let url = info[UIImagePickerControllerMediaURL] as? URL,
-            UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(url.path)
+            UIVideoAtPathIsCompatibleWithSavedPhotosAlbum((videoURL?.path)!)
             else { return }
-        
-        // trying to extract URL to be used elsewhere
-//        self.videoURL = url as NSURL
         
         // dismisses view controller
         picker.presentingViewController?.dismiss(animated: true)
         
-        //playVideo()
+        // alert to say video has recorded & how to view
+        let alert = UIAlertController(title: "Video recorded", message: "If you like the video, Save or Share! \nIf not, re-shoot!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel, handler: nil))
+        present(alert, animated: true, completion: nil)
         
-        let player = AVPlayer(url: url)
-//        let playerLayer = AVPlayerLayer(player: player)
-//        playerLayer.frame = videoPicked.frame
-//        self.view.layer.addSublayer(playerLayer)
-//        player.play()
-
-        let playerViewController = AVPlayerViewController()
-        playerViewController.player = player
-        self.present(playerViewController, animated: true) {
-            playerViewController.player!.play()
-        }
+        // play video in sublayer
+        let player = AVPlayer(url: videoURL!)
+        let playerLayer = AVPlayerLayer(player: player)
+        playerLayer.frame = videoPicked.frame
+        self.view.layer.addSublayer(playerLayer)
+        player.play()
         
-//        let vcPlayer = AVPlayerViewController()
-//        vcPlayer.player = player
-//        vcPlayer.showsPlaybackControls = true
-//        self.present(vcPlayer, animated: true, completion: nil)
-        
-        
+    }
+    
+    
+    // save video to library
+    @IBAction func saveButton(_ sender: UIButton) {
         // saves video to Photo Library - includes alert message
-//        UISaveVideoAtPathToSavedPhotosAlbum(url.path, self, #selector(video(_:didFinishSavingWithError:contextInfo:)), nil)
-        
+        UISaveVideoAtPathToSavedPhotosAlbum((videoURL?.path)!, self, #selector(self.video(_:didFinishSavingWithError:contextInfo:)), nil)
     }
     
-    // trying to create a way to view the video on the main screen before saving
-    func playVideo() {
-
-//        UIVideoEditorController
-
-    }
-    
-    // trying to add code to play the video
-    @IBAction func playButton(_ sender: UIButton) {
-        
-        performSegue(withIdentifier: "videoPlaySegue", sender: self)
-//
-////        if let videoURL = videoURL {
-//        let player = AVPlayer(url: videoURL! as URL)
-//        let vcPlayer = AVPlayerViewController()
-//        vcPlayer.player = player
-//        self.present(vcPlayer, animated: true, completion: nil)
-//        }
-//        else {
-//            let alertController = UIAlertController(title: "No video selected", message: "Choose or take a video", preferredStyle: .alert)
-//            let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-//            alertController.addAction(defaultAction)
-//            present(alertController, animated: true, completion: nil)
-//        }
-    }
-
-    func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        let destination = segue.destination as!
-        AVPlayerViewController
-        let url = self.videoURL
-        destination.player = AVPlayer(url: url! as URL)
-    }
     
     // video function - required to save video
+    // provides alert to success or failure of saving video
     @objc func video(_ videoPath: String, didFinishSavingWithError error: Error?, contextInfo info: AnyObject) {
         let title = (error == nil) ? "Success" : "Error"
         let message = (error == nil) ? "Video was saved" : "Video failed to save"
@@ -139,23 +98,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel, handler: nil))
         present(alert, animated: true, completion: nil)
-    }
-    
-    // get thumbnail of video to show on main screen
-    func getThumbnailFrom(path: URL) -> UIImage? {
-        do {
-            let asset = AVURLAsset(url: path , options: nil)
-            let imgGenerator = AVAssetImageGenerator(asset: asset)
-            imgGenerator.appliesPreferredTrackTransform = true
-            let cgImage = try imgGenerator.copyCGImage(at: CMTimeMake(0, 1), actualTime: nil)
-            let thumbnail = UIImage(cgImage: cgImage)
-            
-            return thumbnail
-        }
-        catch let error {
-            print("*** Error generating thumbnail: \(error.localizedDescription)")
-            return nil
-        }
     }
     
     // alert to inform user that their video has saved to their photo library
@@ -184,28 +126,60 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     // share video
     @IBAction func share(_ sender: UIButton) {
         
-        // to choose the image already showing
-        //let video = videoPicked.image
-        let video = playerController.player
-        
         // share options only show if an image has been chosen/taken
-        if video != nil {
-            let activityVC = UIActivityViewController(activityItems: [video as Any], applicationActivities: nil)
+        if videoURL != nil {
             
-            activityVC.popoverPresentationController?.sourceView = sender
+            let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
+            var compressedFileData : Data? =  nil
+            
+            // Compress video so it shares faster
+            // Encode to mp4
+            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
+                
+                switch exportSession!.status {
+                case .completed:
+                    print("Video compressed successfully")
+                    do {
+                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
+                    } catch _ {
+                        print ("Error converting compressed file to Data")
+                    }
+                default:
+                    print("Could not compress video")
+                }
+            } )
+            
+            // use UIActivityViewController to export the new compressed video URL
+            let activityVC = UIActivityViewController(activityItems: [compressedURL as Any], applicationActivities: nil)
+            
+            activityVC.popoverPresentationController?.sourceView = self.view
+            activityVC.popoverPresentationController?.sourceRect = self.view.frame
             
             self.present(activityVC, animated: true, completion: nil)
         }
             // error message to prompt the user to choose or take a photo
         else {
-            let alertController = UIAlertController(title: "No video selected", message: "Choose or take a video", preferredStyle: .alert)
-            let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-            alertController.addAction(defaultAction)
-            present(alertController, animated: true, completion: nil)
+            errorNotice()
         }
     }
     
     
+    // Video compression function - uses input and output URLs to export the session - used in the share function above
+    func compressVideo(inputURL: URL, outputURL: URL, handler:@escaping (_ exportSession: AVAssetExportSession?)-> Void) {
+        let urlAsset = AVURLAsset(url: inputURL, options: nil)
+        guard let exportSession = AVAssetExportSession(asset: urlAsset, presetName: AVAssetExportPresetMediumQuality) else {
+            handler(nil)
+            
+            return
+        }
+        
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = AVFileType.mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+        exportSession.exportAsynchronously { () -> Void in
+            handler(exportSession)
+        }
+    }
     
     
     override func viewDidLoad() {
@@ -253,5 +227,37 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
  //    }
 
  
+ --- AVPlayerViewController
+ //        let vcPlayer = AVPlayerViewController()
+ //        vcPlayer.player = player
+ //        vcPlayer.showsPlaybackControls = true
+ //        self.present(vcPlayer, animated: true, completion: nil)
+ 
+ 
+ //        let playerViewController = AVPlayerViewController()
+ //        playerViewController.player = player
+ //        self.present(playerViewController, animated: true) {
+ //            playerViewController.player!.play()
+ //        }
+ 
+ 
+ --- get thumbnail of video to show on main screen
+ //    func getThumbnailFrom(path: URL) -> UIImage? {
+ //        do {
+ //            let asset = AVURLAsset(url: path , options: nil)
+ //            let imgGenerator = AVAssetImageGenerator(asset: asset)
+ //            imgGenerator.appliesPreferredTrackTransform = true
+ //            let cgImage = try imgGenerator.copyCGImage(at: CMTimeMake(0, 1), actualTime: nil)
+ //            let thumbnail = UIImage(cgImage: cgImage)
+ //
+ //            return thumbnail
+ //        }
+ //        catch let error {
+ //            print("*** Error generating thumbnail: \(error.localizedDescription)")
+ //            return nil
+ //        }
+ //    }
+
+
  */
  
