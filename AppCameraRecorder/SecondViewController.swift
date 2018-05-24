@@ -79,6 +79,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         playerLayer.frame = videoPicked.frame
         self.view.layer.addSublayer(playerLayer)
         player.play()
+        print("original: ", videoURL!)
         
     }
     
@@ -130,7 +131,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             let source = request.sourceImage
             filter.setValue(source, forKey: kCIInputImageKey)
             let output = filter.outputImage
-            
             request.finish(with: output!, context: nil)
         })
         
@@ -144,13 +144,15 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         player.play()
         
         videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
-        print("VIDEO IS HERE: ", videoURL!)
+        print("filteredASSET: ", asset)
+        print("---- filteredVIDEO: ", videoURL!)
     }
     
     
     // share video
     @IBAction func share(_ sender: UIButton) {
         
+        print("---- firstSHARE: ", videoURL!)
         let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
         
         // share options only show if an image has been chosen/taken
@@ -164,7 +166,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
                 guard let session = exportSession
                 else { return }
 
-                print("inputURL: ", self.videoURL!)
+                print("shareURL: ", self.videoURL!)
                 
                 // switch statement detailing the session's status
                 switch session.status {
@@ -201,6 +203,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         }
         
         videoURL = compressedURL
+        print("shareCOMPRESSED: ", videoURL!)
     }
     
     

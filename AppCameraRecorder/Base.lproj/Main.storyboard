@@ -63,7 +63,7 @@
                                 </connections>
                             </button>
                             <slider hidden="YES" opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="0.0" maxValue="10" translatesAutoresizingMaskIntoConstraints="NO" id="6AH-VC-NTd" userLabel="slider">
-                                <rect key="frame" x="250" y="507" width="118" height="30"/>
+                                <rect key="frame" x="252" y="95" width="118" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxY="YES"/>
                                 <connections>
                                     <action selector="intensityChanged:" destination="9pv-A4-QxB" eventType="valueChanged" id="xgZ-0U-zkM"/>
@@ -89,6 +89,17 @@
                                     <action selector="saveButton:" destination="9pv-A4-QxB" eventType="touchUpInside" id="7oE-q1-4d8"/>
                                 </connections>
                             </button>
+                            <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ISy-lV-FyX">
+                                <rect key="frame" x="0.0" y="470" width="375" height="81"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <subviews>
+                                    <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="voC-2g-Z9X">
+                                        <rect key="frame" x="0.0" y="0.0" width="375" height="81"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                    </view>
+                                </subviews>
+                            </scrollView>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <viewLayoutGuide key="safeArea" id="PQr-Ze-W5v"/>
@@ -102,6 +113,8 @@
                     </tabBarItem>
                     <simulatedTabBarMetrics key="simulatedBottomBarMetrics"/>
                     <connections>
+                        <outlet property="filterButtonView" destination="voC-2g-Z9X" id="enP-20-gue"/>
+                        <outlet property="filterScrollView" destination="ISy-lV-FyX" id="v8z-jw-g4X"/>
                         <outlet property="imagePicked" destination="GSz-bs-24H" id="Tdj-PO-Jy2"/>
                         <outlet property="slider" destination="6AH-VC-NTd" id="9UO-9x-DRP"/>
                     </connections>

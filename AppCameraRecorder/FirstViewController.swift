@@ -13,16 +13,20 @@ import AVKit
 import MobileCoreServices // to access camera
 import CoreImage // to apply filters
 
-class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIScrollViewDelegate {
 
+    // outlets created for on-screen buttons, views, etc.
     @IBOutlet weak var imagePicked: UIImageView!
     @IBOutlet weak var slider: UISlider!
+    @IBOutlet weak var filterScrollView: UIScrollView!
+    @IBOutlet weak var filterButtonView: UIView!
     
+    // variables
     var currentImage : UIImage!
     var context : CIContext!
     var currentFilter : CIFilter!
     
-    // filter array
+    // array of image filters
     var CIFilters = [
         "CIPhotoEffectChrome",
         "CIPhotoEffectFade",
@@ -31,7 +35,13 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         "CIPhotoEffectProcess",
         "CIPhotoEffectTonal",
         "CIPhotoEffectTransfer",
-        "CISepiaTone"
+        "CIPhotoEffectMono",
+        "CIColorClamp",
+        "CISepiaTone",
+        "CIGaussianBlur",
+        "CIMotionBlur",
+        "CIVibrance",
+        "CICMYKHalftone"
     ]
     
     override func viewDidLoad() {
@@ -49,6 +59,12 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     // take photo
     @IBAction func recordButton(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) {
+            // to stop the filter showing the previous option
+            filterScrollView.isHidden = true
+            filterButtonView.isHidden = true
+            ResetImage(sender: filterScrollView)
+            
+            // takes photo with camera & adds it to the UIView
             let imagePicker = UIImagePickerController()
             imagePicker.delegate = self
             imagePicker.sourceType = UIImagePickerControllerSourceType.camera
@@ -60,6 +76,11 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     // open photo library
     @IBAction func photoLibrary(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary){
+            // to stop the filter showing the previous option
+            filterScrollView.isHidden = true
+            filterButtonView.isHidden = true
+            ResetImage(sender: filterScrollView)
+            
             let imagePicker = UIImagePickerController()
             imagePicker.delegate = self
             imagePicker.sourceType = UIImagePickerControllerSourceType.photoLibrary
@@ -80,36 +101,69 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     // filter options
     @IBAction func filter(_ sender: UIButton) {
 
-        let ac = UIAlertController(title: "Choose filter", message: nil, preferredStyle: .actionSheet)
-        ac.addAction(UIAlertAction(title: "CIPhotoEffectChrome", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CIPhotoEffectFade", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CIPhotoEffectInstant", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CIPhotoEffectNoir", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CITwirlDistortion", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CIUnsharpMask", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "CIVignette", style: .default, handler: setFilter))
-        ac.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        ac.addAction(UIAlertAction(title: "Reset", style: .destructive, handler: ResetImage))
-        present(ac, animated: true)
+        imagePicked.image = currentImage
+        filterScrollView.isHidden = false
+        filterButtonView.isHidden = false
+        
+        var xCoord: CGFloat = 5
+        let yCoord: CGFloat = 10
+        let buttonWidth:CGFloat = 70
+        let buttonHeight:CGFloat = 70
+        let gapBetweenButtons: CGFloat = 5
+        
+        var itemCount = 0
+        
+        for i in 0..<CIFilters.count {
+            itemCount = i
+            
+            // Button properties
+            let filterButton = UIButton(type: .custom)
+            filterButton.frame = CGRect(x: xCoord, y: yCoord, width: buttonWidth, height: buttonHeight)
+            filterButton.tag = itemCount
+            filterButton.addTarget(self, action: #selector(FirstViewController.filterButtonTapped(sender:)), for: .touchUpInside)
+            filterButton.layer.cornerRadius = 6
+            filterButton.clipsToBounds = true
+            
+            // Create filters for each button
+            let ciContext = CIContext(options: nil)
+            let coreImage = CIImage(image: currentImage)
+            let filter = CIFilter(name: "\(CIFilters[i])" )
+            filter!.setDefaults()
+            filter!.setValue(coreImage, forKey: kCIInputImageKey)
+            let filteredImageData = filter!.value(forKey: kCIOutputImageKey) as! CIImage
+            let filteredImageRef = ciContext.createCGImage(filteredImageData, from: filteredImageData.extent)
+            let imageForButton = UIImage(cgImage: filteredImageRef!);
+            
+            filterButton.setBackgroundImage(imageForButton, for: .normal)
+            
+            // Add Buttons in the Scroll View
+            xCoord += buttonWidth + gapBetweenButtons
+            
+//            filterScrollView.addSubview(filterButton)
+            filterButtonView.addSubview(filterButton)
+        }
+        
+        // Resize Scroll View
+        var contentRect = CGRect.zero
+        
+        for view in filterScrollView.subviews {
+            contentRect = contentRect.union(view.frame)
+        }
+        filterScrollView.contentSize = contentRect.size
         
     }
     
-    func setFilter(action: UIAlertAction) {
-        // make sure we have a valid image before continuing!
-        guard currentImage != nil else { return }
-        
-        currentFilter = CIFilter(name: action.title!)
-        let beginImage = CIImage(image: currentImage)
-        currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
-        
-        applyProcessing()
+    @objc func filterButtonTapped(sender: UIButton) {
+        let button = sender as UIButton
+        imagePicked.image = button.backgroundImage(for: UIControlState.normal)
     }
     
+    
+    // reset the image
     func ResetImage (sender: AnyObject) {
         if let image = self.currentImage {
             self.imagePicked.image = image
         }
-        
     }
     
     // show photo on main page after taken

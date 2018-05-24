@@ -13,7 +13,6 @@
 		50287F4520A6A979007EF7B0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 50287F4320A6A979007EF7B0 /* Main.storyboard */; };
 		50287F4720A6A989007EF7B0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 50287F4620A6A989007EF7B0 /* Assets.xcassets */; };
 		50287F4A20A6A989007EF7B0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 50287F4820A6A989007EF7B0 /* LaunchScreen.storyboard */; };
-		50B669D220AC2E21008EC796 /* FilterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B669D120AC2E21008EC796 /* FilterViewController.swift */; };
 		50EBD3D520AFA6FF00B9CFA6 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50EBD3D420AFA6FF00B9CFA6 /* MapKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -26,7 +25,6 @@
 		50287F4620A6A989007EF7B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		50287F4920A6A989007EF7B0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		50287F4B20A6A989007EF7B0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		50B669D120AC2E21008EC796 /* FilterViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterViewController.swift; sourceTree = "<group>"; };
 		50EBD3D420AFA6FF00B9CFA6 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -65,7 +63,6 @@
 				50287F3D20A6A979007EF7B0 /* AppDelegate.swift */,
 				50287F3F20A6A979007EF7B0 /* FirstViewController.swift */,
 				50287F4120A6A979007EF7B0 /* SecondViewController.swift */,
-				50B669D120AC2E21008EC796 /* FilterViewController.swift */,
 				50287F4320A6A979007EF7B0 /* Main.storyboard */,
 				50287F4620A6A989007EF7B0 /* Assets.xcassets */,
 				50287F4820A6A989007EF7B0 /* LaunchScreen.storyboard */,
@@ -160,7 +157,6 @@
 			files = (
 				50287F4220A6A979007EF7B0 /* SecondViewController.swift in Sources */,
 				50287F3E20A6A979007EF7B0 /* AppDelegate.swift in Sources */,
-				50B669D220AC2E21008EC796 /* FilterViewController.swift in Sources */,
 				50287F4020A6A979007EF7B0 /* FirstViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
