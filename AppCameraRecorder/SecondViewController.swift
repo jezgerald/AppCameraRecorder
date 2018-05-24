@@ -101,6 +101,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         present(alert, animated: true, completion: nil)
     }
     
+    
     // alert to inform user that their video has saved to their photo library
     func saveNotice() {
         let alertController = UIAlertController(title: "Video saved!", message: "Your video was successfully saved", preferredStyle: .alert)
@@ -109,6 +110,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         present(alertController, animated: true, completion: nil)
     }
 
+    
     // error message to prompt the user to choose or take a video
     func errorNotice() {
         
@@ -117,6 +119,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         alertController.addAction(defaultAction)
         present(alertController, animated: true, completion: nil)
     }
+    
     
     // filter options to apply to video
     @IBAction func filterButton(_ sender: UIButton) {
@@ -131,15 +134,11 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             request.finish(with: output!, context: nil)
         })
         
-        
-        // NOT WORKING - can hear audio, can't see video -- added frame, video can be seen! :D
         let item = AVPlayerItem(asset: asset)
         print("ASSET IS HERE: ", asset)
         item.videoComposition = composition
         let player = AVPlayer(playerItem: item)
         let newLayer = AVPlayerLayer(player: player)
-//        playerLayer.isHidden = true
-//        videoPicked.isHidden = true
         newLayer.frame = videoPicked.frame
         self.view.layer.addSublayer(newLayer)
         player.play()
@@ -152,13 +151,10 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     // share video
     @IBAction func share(_ sender: UIButton) {
         
+        let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
+        
         // share options only show if an image has been chosen/taken
         if videoURL != nil {
-            
-            print("SHARE HERE: ", videoURL!)
-            
-            let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
-//            var compressedFileData : Data? =  nil //used in the switch case statement
             
             // Compress video so it shares faster
             // Encode to mp4
@@ -170,6 +166,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
 
                 print("inputURL: ", self.videoURL!)
                 
+                // switch statement detailing the session's status
                 switch session.status {
                 case .unknown:
                     break
@@ -187,53 +184,44 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
                 }
                 print("COMPRESSED: ", compressedURL)
             }
-    // previously tried code - works to compress the video, but still doesn't work with sharing a filtered video
-////            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
-////
-////                switch exportSession!.status {
-////                case .completed:
-////                    print("Video compressed successfully")
-////                    do {
-////                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
-////                        compressedURL = compressedFileData!.url
-////                    } catch _ {
-////                        print ("Error converting compressed file to Data")
-////                    }
-////                default:
-////                    print("Could not compress video")
-////                }
-//            } )
-                
+            
+            videoURL = compressedURL
             // use UIActivityViewController to export the new compressed video URL
-            let activityVC = UIActivityViewController(activityItems: [compressedURL as Any], applicationActivities: nil)
+            let activityVC = UIActivityViewController(activityItems: [videoURL as Any], applicationActivities: nil)
             
             activityVC.popoverPresentationController?.sourceView = self.view
             activityVC.popoverPresentationController?.sourceRect = self.view.frame
             
             self.present(activityVC, animated: true, completion: nil)
+            print("newCOMPRESSED: ", videoURL!)
         }
         // error message to prompt the user to choose or take a photo
         else {
             errorNotice()
         }
+        
+        videoURL = compressedURL
     }
     
     
     // Video compression function - uses input and output URLs to export the session - used in the share function above
     func compressVideo(inputURL: URL, outputURL: URL, handler:@escaping (_ exportSession: AVAssetExportSession?)-> Void) {
-        let urlAsset = AVURLAsset(url: inputURL, options: nil)
+        let urlAsset = AVURLAsset(url: videoURL!, options: nil)
         guard let exportSession = AVAssetExportSession(asset: urlAsset, presetName: AVAssetExportPresetMediumQuality)
         else {
             handler(nil)
             return
         }
-        
+        print("ExtraCOMPRESSED: ", outputURL)
         exportSession.outputURL = outputURL
         exportSession.outputFileType = AVFileType.mp4
         exportSession.shouldOptimizeForNetworkUse = true
         exportSession.exportAsynchronously { () -> Void in
             handler(exportSession)
         }
+        
+        videoURL = outputURL
+        print("ExtraCOMPRESSED#2: ", videoURL!)
     }
     
     
@@ -314,5 +302,23 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
  //    }
 
 
+ 
+ // previously tried code - works to compress the video, but still doesn't work with sharing a filtered video
+ ////            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
+ ////
+ ////                switch exportSession!.status {
+ ////                case .completed:
+ ////                    print("Video compressed successfully")
+ ////                    do {
+ ////                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
+ ////                        compressedURL = compressedFileData!.url
+ ////                    } catch _ {
+ ////                        print ("Error converting compressed file to Data")
+ ////                    }
+ ////                default:
+ ////                    print("Could not compress video")
+ ////                }
+ //            } )
+ 
  */
  
