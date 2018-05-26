@@ -52,6 +52,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         }
     }
     
+    
     // finish recording and close the video
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
 
@@ -69,7 +70,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         picker.presentingViewController?.dismiss(animated: true)
         
         // alert to say video has recorded & how to view
-        let alert = UIAlertController(title: "Video recorded", message: "If you like the video, Save or Share! \nIf not, re-shoot!", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Video recorded", message: "If you like the video, save or share! \nIf not, re-shoot!", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel, handler: nil))
         present(alert, animated: true, completion: nil)
         
@@ -79,8 +80,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         playerLayer.frame = videoPicked.frame
         self.view.layer.addSublayer(playerLayer)
         player.play()
-        print("original: ", videoURL!)
-        
     }
     
     
@@ -125,6 +124,11 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     // filter options to apply to video
     @IBAction func filterButton(_ sender: UIButton) {
         let filter = CIFilter(name: "CIPhotoEffectNoir")!
+        
+        // alert user if there's no video
+        if videoURL == nil { errorNotice()
+            return }
+        
         let asset = AVAsset(url: videoURL!)
         
         let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
@@ -135,7 +139,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         })
         
         let item = AVPlayerItem(asset: asset)
-        print("ASSET IS HERE: ", asset)
         item.videoComposition = composition
         let player = AVPlayer(playerItem: item)
         let newLayer = AVPlayerLayer(player: player)
@@ -144,15 +147,12 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         player.play()
         
         videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
-        print("filteredASSET: ", asset)
-        print("---- filteredVIDEO: ", videoURL!)
     }
     
     
     // share video
     @IBAction func share(_ sender: UIButton) {
         
-        print("---- firstSHARE: ", videoURL!)
         let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
         
         // share options only show if an image has been chosen/taken
@@ -165,8 +165,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             compressVideo(inputURL: videoURL! as URL, outputURL: compressedURL) { (exportSession) in
                 guard let session = exportSession
                 else { return }
-
-                print("shareURL: ", self.videoURL!)
                 
                 // switch statement detailing the session's status
                 switch session.status {
@@ -184,10 +182,8 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
                 case .cancelled:
                     break
                 }
-                print("COMPRESSED: ", compressedURL)
             }
             
-            videoURL = compressedURL
             // use UIActivityViewController to export the new compressed video URL
             let activityVC = UIActivityViewController(activityItems: [videoURL as Any], applicationActivities: nil)
             
@@ -195,7 +191,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             activityVC.popoverPresentationController?.sourceRect = self.view.frame
             
             self.present(activityVC, animated: true, completion: nil)
-            print("newCOMPRESSED: ", videoURL!)
         }
         // error message to prompt the user to choose or take a photo
         else {
@@ -203,29 +198,64 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         }
         
         videoURL = compressedURL
-        print("shareCOMPRESSED: ", videoURL!)
     }
     
     
     // Video compression function - uses input and output URLs to export the session - used in the share function above
     func compressVideo(inputURL: URL, outputURL: URL, handler:@escaping (_ exportSession: AVAssetExportSession?)-> Void) {
         let urlAsset = AVURLAsset(url: videoURL!, options: nil)
+        
         guard let exportSession = AVAssetExportSession(asset: urlAsset, presetName: AVAssetExportPresetMediumQuality)
         else {
             handler(nil)
             return
         }
-        print("ExtraCOMPRESSED: ", outputURL)
+        
         exportSession.outputURL = outputURL
         exportSession.outputFileType = AVFileType.mp4
         exportSession.shouldOptimizeForNetworkUse = true
-        exportSession.exportAsynchronously { () -> Void in
-            handler(exportSession)
+        exportSession.exportAsynchronously() {
+            DispatchQueue.main.async {
+                self.exportDidFinish(exportSession)
+            }
+        }
+        videoURL = exportSession.outputURL
+    }
+    
+    
+    func exportDidFinish(_ session: AVAssetExportSession) {
+        
+        guard
+            session.status == AVAssetExportSessionStatus.completed,
+            let outputURL = session.outputURL
+            else {
+                return
         }
         
-        videoURL = outputURL
-        print("ExtraCOMPRESSED#2: ", videoURL!)
+        let saveVideoToPhotos = {
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: outputURL)
+            }) { saved, error in
+                let success = saved && (error == nil)
+                let title = success ? "Success" : "Error"
+                let message = success ? "Video saved" : "Failed to save video"
+                
+                let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel, handler: nil))
+                self.present(alert, animated: true, completion: nil)
+            }
+        }
+        
+        // Ensure permission to access Photo Library
+        if PHPhotoLibrary.authorizationStatus() != .authorized {
+            PHPhotoLibrary.requestAuthorization { status in
+                if status == .authorized {
+                    saveVideoToPhotos()
+                }
+            }
+        } else { saveVideoToPhotos() }
     }
+    
     
     
     override func viewDidLoad() {
@@ -322,6 +352,34 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
  ////                    print("Could not compress video")
  ////                }
  //            } )
+
+ 
+ 
+ ------- don't even know anymore
+ //        guard let outputURL = exportSession.outputURL else { return }
+ //
+ //        PHPhotoLibrary.requestAuthorization { status in
+ //            if status == .authorized {
+ //
+ //                // Save the movie file to the photo library and cleanup.
+ //                PHPhotoLibrary.shared().performChanges({
+ //                    let options = PHAssetResourceCreationOptions()
+ //                    options.shouldMoveFile = true
+ //                    let creationRequest = PHAssetCreationRequest.forAsset()
+ //                    creationRequest.addResource(with: .video, fileURL: outputURL, options: options)
+ //                }, completionHandler: { success, error in
+ //                    if !success {
+ //                        guard let theError = error else { return }
+ //                        print("An export error occurred: \(theError.localizedDescription)")
+ //                        return
+ //                    }
+ //                })
+ //            }
+ //            else {
+ //                print("Not authorized to save movie to the camera roll.")
+ //                return
+ //            }
+ //        }
  
  */
  

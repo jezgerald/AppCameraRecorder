@@ -18,7 +18,6 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     // outlets created for on-screen buttons, views, etc.
     @IBOutlet weak var imagePicked: UIImageView!
     @IBOutlet weak var slider: UISlider!
-    @IBOutlet weak var filterScrollView: UIScrollView!
     @IBOutlet weak var filterButtonView: UIView!
     
     // variables
@@ -60,9 +59,8 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     @IBAction func recordButton(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) {
             // to stop the filter showing the previous option
-            filterScrollView.isHidden = true
             filterButtonView.isHidden = true
-            ResetImage(sender: filterScrollView)
+            ResetImage(sender: filterButtonView)
             
             // takes photo with camera & adds it to the UIView
             let imagePicker = UIImagePickerController()
@@ -77,9 +75,8 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     @IBAction func photoLibrary(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary){
             // to stop the filter showing the previous option
-            filterScrollView.isHidden = true
             filterButtonView.isHidden = true
-            ResetImage(sender: filterScrollView)
+            ResetImage(sender: filterButtonView)
             
             let imagePicker = UIImagePickerController()
             imagePicker.delegate = self
@@ -102,7 +99,6 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     @IBAction func filter(_ sender: UIButton) {
 
         imagePicked.image = currentImage
-        filterScrollView.isHidden = false
         filterButtonView.isHidden = false
         
         var xCoord: CGFloat = 5
@@ -113,43 +109,46 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         
         var itemCount = 0
         
-        for i in 0..<CIFilters.count {
-            itemCount = i
-            
-            // Button properties
-            let filterButton = UIButton(type: .custom)
-            filterButton.frame = CGRect(x: xCoord, y: yCoord, width: buttonWidth, height: buttonHeight)
-            filterButton.tag = itemCount
-            filterButton.addTarget(self, action: #selector(FirstViewController.filterButtonTapped(sender:)), for: .touchUpInside)
-            filterButton.layer.cornerRadius = 6
-            filterButton.clipsToBounds = true
-            
-            // Create filters for each button
-            let ciContext = CIContext(options: nil)
-            let coreImage = CIImage(image: currentImage)
-            let filter = CIFilter(name: "\(CIFilters[i])" )
-            filter!.setDefaults()
-            filter!.setValue(coreImage, forKey: kCIInputImageKey)
-            let filteredImageData = filter!.value(forKey: kCIOutputImageKey) as! CIImage
-            let filteredImageRef = ciContext.createCGImage(filteredImageData, from: filteredImageData.extent)
-            let imageForButton = UIImage(cgImage: filteredImageRef!);
-            
-            filterButton.setBackgroundImage(imageForButton, for: .normal)
-            
-            // Add Buttons in the Scroll View
-            xCoord += buttonWidth + gapBetweenButtons
-            
-//            filterScrollView.addSubview(filterButton)
-            filterButtonView.addSubview(filterButton)
+        if imagePicked.image != nil {
+            for i in 0..<CIFilters.count {
+                itemCount = i
+                
+                // Button properties
+                let filterButton = UIButton(type: .custom)
+                filterButton.frame = CGRect(x: xCoord, y: yCoord, width: buttonWidth, height: buttonHeight)
+                filterButton.tag = itemCount
+                filterButton.addTarget(self, action: #selector(FirstViewController.filterButtonTapped(sender:)), for: .touchUpInside)
+                filterButton.layer.cornerRadius = 6
+                filterButton.clipsToBounds = true
+                
+                // Create filters for each button
+                let ciContext = CIContext(options: nil)
+                let coreImage = CIImage(image: currentImage)
+                let filter = CIFilter(name: "\(CIFilters[i])" )
+                filter!.setDefaults()
+                filter!.setValue(coreImage, forKey: kCIInputImageKey)
+                let filteredImageData = filter!.value(forKey: kCIOutputImageKey) as! CIImage
+                let filteredImageRef = ciContext.createCGImage(filteredImageData, from: filteredImageData.extent)
+                let imageForButton = UIImage(cgImage: filteredImageRef!);
+                
+                filterButton.setBackgroundImage(imageForButton, for: .normal)
+                
+                // Add Buttons in the Scroll View
+                xCoord += buttonWidth + gapBetweenButtons
+                filterButtonView.addSubview(filterButton)
+            }
+        }
+        else {
+            errorMessage()
         }
         
         // Resize Scroll View
         var contentRect = CGRect.zero
         
-        for view in filterScrollView.subviews {
+        for view in filterButtonView.subviews {
             contentRect = contentRect.union(view.frame)
         }
-        filterScrollView.contentSize = contentRect.size
+        filterButtonView.sizeToFit()
         
     }
     
@@ -237,13 +236,16 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         }
         // error message to prompt the user to choose or take a photo
         else {
-            let alertController = UIAlertController(title: "No photo selected", message: "Choose or take a photo", preferredStyle: .alert)
-            let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-            alertController.addAction(defaultAction)
-            present(alertController, animated: true, completion: nil)
+            errorMessage()
         }
     }
     
+    func errorMessage() {
+        let alertController = UIAlertController(title: "No photo selected", message: "Choose or take a photo", preferredStyle: .alert)
+        let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertController.addAction(defaultAction)
+        present(alertController, animated: true, completion: nil)
+    }
     
 }
 
