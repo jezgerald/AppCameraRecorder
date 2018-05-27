@@ -14,10 +14,12 @@ import MobileCoreServices // to access camera
 import CoreImage // to create filters
 import CoreMedia // to create & apply video filters
 
-class SecondViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVAudioPlayerDelegate, AVAudioRecorderDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
+class SecondViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVAudioPlayerDelegate, AVAudioRecorderDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
     
     // image viewer to show preview of video after taken
     @IBOutlet weak var videoPicked: UIImageView!
+    // picker view to choose filter
+    @IBOutlet weak var pickerView: UIPickerView!
     
     // variables
     var captureSession : AVCaptureSession!
@@ -26,9 +28,10 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     var playerLayer = AVPlayerLayer()
     var assetWriter:AVAssetWriter?
     var outputURL: URL?
+    let pickerLayer = CALayer()
     
     // array of filters
-    var CIFilters = [
+    let CIFilters = [
         "CISepiaTone",
         "CIPhotoEffectChrome",
         "CIPhotoEffectFade",
@@ -45,6 +48,9 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     // button to record video
     @IBAction func recordButton(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) {
+            // hide filter option from view
+            pickerView.isHidden = true
+
             let mediaUI = UIImagePickerController()
             mediaUI.delegate = self
             mediaUI.sourceType = UIImagePickerControllerSourceType.camera
@@ -93,7 +99,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         let player = AVPlayer(url: videoURL!)
         playerLayer = AVPlayerLayer(player: player)
         playerLayer.frame = videoPicked.frame
-        self.view.layer.addSublayer(playerLayer)
+        self.view.layer.insertSublayer(playerLayer, below: pickerLayer)
         player.play()
     }
     
@@ -136,124 +142,74 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     }
     
     
-    // filter options to apply to video
+    
+// UIPickerView to choose the video's filter
+    
+    // returns the number of 'columns' to display.
+    public func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    // returns the # of rows in each component..
+    public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return CIFilters.count
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return CIFilters[row]
+    }
+    
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        let selectedFilter = CIFilters[pickerView.selectedRow(inComponent: 0)]
+        let filter = CIFilter(name: selectedFilter)
+        
+        if videoURL == nil { errorNotice()
+            return }
+        
+        let asset = AVAsset(url: videoURL!)
+        
+        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
+            let source = request.sourceImage
+            filter?.setValue(source, forKey: kCIInputImageKey)
+            let output = filter?.outputImage
+            request.finish(with: output!, context: nil)
+        })
+        
+        let item = AVPlayerItem(asset: asset)
+        item.videoComposition = composition
+        let player = AVPlayer(playerItem: item)
+        playerLayer = AVPlayerLayer(player: player)
+        playerLayer.frame = videoPicked.frame
+        self.view.layer.insertSublayer(playerLayer, below: pickerLayer)
+        player.play()
+        
+        outputURL = videoURL
+        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
+        assetWriter?.startWriting()
+        assetWriter?.finishWriting {
+            self.videoURL = self.outputURL
+        }
+        
+        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+        
+    }
+// end of UIPickerView
+    
+
+    // button to show filter options using UIPicker above
     @IBAction func filterButton(_ sender: UIButton) {
-        let filter = CIFilter(name: "CIPhotoEffectNoir")!
         
-        // alert user if there's no video
-        if videoURL == nil { errorNotice()
-            return }
-        
-        let asset = AVAsset(url: videoURL!)
-        
-        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
-            let source = request.sourceImage
-            filter.setValue(source, forKey: kCIInputImageKey)
-            let output = filter.outputImage
-            request.finish(with: output!, context: nil)
-        })
-        
-        let item = AVPlayerItem(asset: asset)
-        item.videoComposition = composition
-        let player = AVPlayer(playerItem: item)
-        let newLayer = AVPlayerLayer(player: player)
-        newLayer.frame = videoPicked.frame
-        self.view.layer.addSublayer(newLayer)
-        player.play()
-    
-        print("FilteredURL: ", videoURL!)
-        
-        outputURL = videoURL
-        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
-        assetWriter?.startWriting()
-        assetWriter?.finishWriting {
-            print("outputURL: ", self.outputURL!)
-            self.videoURL = self.outputURL
+        if videoURL != nil {
+            pickerView.isHidden = false
+            pickerLayer.frame = videoPicked.frame
+            self.view.layer.addSublayer(pickerLayer)
         }
-        
-        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
-        print("NewFilterURL: ", videoURL!)
+        else { errorNotice() }
         
     }
     
-    
-    @IBAction func filter(_ sender: UIButton) {
-        let filter = CIFilter(name: "CISepiaTone")!
-        
-        // alert user if there's no video
-        if videoURL == nil { errorNotice()
-            return }
-        
-        let asset = AVAsset(url: videoURL!)
-        
-        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
-            let source = request.sourceImage
-            filter.setValue(source, forKey: kCIInputImageKey)
-            let output = filter.outputImage
-            request.finish(with: output!, context: nil)
-        })
-        
-        let item = AVPlayerItem(asset: asset)
-        item.videoComposition = composition
-        let player = AVPlayer(playerItem: item)
-        let newLayer = AVPlayerLayer(player: player)
-        newLayer.frame = videoPicked.frame
-        self.view.layer.addSublayer(newLayer)
-        player.play()
-        
-        print("FilteredURL: ", videoURL!)
-        
-        outputURL = videoURL
-        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
-        assetWriter?.startWriting()
-        assetWriter?.finishWriting {
-            print("outputURL: ", self.outputURL!)
-            self.videoURL = self.outputURL
-        }
-        
-        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
-        print("NewFilterURL: ", videoURL!)
-    }
-    
-    
-    @IBAction func filterFade(_ sender: UIButton) {
-        
-        let filter = CIFilter(name: "CIPhotoEffectProcess")!
-        
-        // alert user if there's no video
-        if videoURL == nil { errorNotice()
-            return }
-        
-        let asset = AVAsset(url: videoURL!)
-        
-        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
-            let source = request.sourceImage
-            filter.setValue(source, forKey: kCIInputImageKey)
-            let output = filter.outputImage
-            request.finish(with: output!, context: nil)
-        })
-        
-        let item = AVPlayerItem(asset: asset)
-        item.videoComposition = composition
-        let player = AVPlayer(playerItem: item)
-        let newLayer = AVPlayerLayer(player: player)
-        newLayer.frame = videoPicked.frame
-        self.view.layer.addSublayer(newLayer)
-        player.play()
-        
-        print("FilteredURL: ", videoURL!)
-        
-        outputURL = videoURL
-        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
-        assetWriter?.startWriting()
-        assetWriter?.finishWriting {
-            print("outputURL: ", self.outputURL!)
-            self.videoURL = self.outputURL
-        }
-        
-        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
-        print("NewFilterURL: ", videoURL!)
-    }
+
     
     // share video
     @IBAction func share(_ sender: UIButton) {
@@ -366,6 +322,10 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        
+        pickerView.delegate = self
+        pickerView.dataSource = self
+        
     }
     
     override func didReceiveMemoryWarning() {
