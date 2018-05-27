@@ -6,8 +6,8 @@
 //  Copyright © 2018 Jessica Fitzgerald. All rights reserved.
 //
 
-import UIKit
 import AVFoundation
+import UIKit
 import AVKit
 import Photos // to take photos
 import MobileCoreServices // to access camera
@@ -16,16 +16,31 @@ import CoreMedia // to create & apply video filters
 
 class SecondViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVAudioPlayerDelegate, AVAudioRecorderDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
     
-    var captureSession : AVCaptureSession!
-    
     // image viewer to show preview of video after taken
     @IBOutlet weak var videoPicked: UIImageView!
     
-    var soundRecorder = AVAudioRecorder()
-    var soundPlayer = AVAudioPlayer()
+    // variables
+    var captureSession : AVCaptureSession!
     var videoURL: URL?
     let playerController = AVPlayerViewController()
     var playerLayer = AVPlayerLayer()
+    var assetWriter:AVAssetWriter?
+    var outputURL: URL?
+    
+    // array of filters
+    var CIFilters = [
+        "CISepiaTone",
+        "CIPhotoEffectChrome",
+        "CIPhotoEffectFade",
+        "CIPhotoEffectInstant",
+        "CIPhotoEffectNoir",
+        "CIPhotoEffectProcess",
+        "CIPhotoEffectTonal",
+        "CIPhotoEffectTransfer",
+        "CIPhotoEffectMono",
+        "CIGaussianBlur"
+    ]
+    
     
     // button to record video
     @IBAction func recordButton(_ sender: UIButton) {
@@ -145,27 +160,118 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         newLayer.frame = videoPicked.frame
         self.view.layer.addSublayer(newLayer)
         player.play()
+    
+        print("FilteredURL: ", videoURL!)
+        
+        outputURL = videoURL
+        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
+        assetWriter?.startWriting()
+        assetWriter?.finishWriting {
+            print("outputURL: ", self.outputURL!)
+            self.videoURL = self.outputURL
+        }
         
         videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+        print("NewFilterURL: ", videoURL!)
+        
     }
     
+    
+    @IBAction func filter(_ sender: UIButton) {
+        let filter = CIFilter(name: "CISepiaTone")!
+        
+        // alert user if there's no video
+        if videoURL == nil { errorNotice()
+            return }
+        
+        let asset = AVAsset(url: videoURL!)
+        
+        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
+            let source = request.sourceImage
+            filter.setValue(source, forKey: kCIInputImageKey)
+            let output = filter.outputImage
+            request.finish(with: output!, context: nil)
+        })
+        
+        let item = AVPlayerItem(asset: asset)
+        item.videoComposition = composition
+        let player = AVPlayer(playerItem: item)
+        let newLayer = AVPlayerLayer(player: player)
+        newLayer.frame = videoPicked.frame
+        self.view.layer.addSublayer(newLayer)
+        player.play()
+        
+        print("FilteredURL: ", videoURL!)
+        
+        outputURL = videoURL
+        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
+        assetWriter?.startWriting()
+        assetWriter?.finishWriting {
+            print("outputURL: ", self.outputURL!)
+            self.videoURL = self.outputURL
+        }
+        
+        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+        print("NewFilterURL: ", videoURL!)
+    }
+    
+    
+    @IBAction func filterFade(_ sender: UIButton) {
+        
+        let filter = CIFilter(name: "CIPhotoEffectProcess")!
+        
+        // alert user if there's no video
+        if videoURL == nil { errorNotice()
+            return }
+        
+        let asset = AVAsset(url: videoURL!)
+        
+        let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
+            let source = request.sourceImage
+            filter.setValue(source, forKey: kCIInputImageKey)
+            let output = filter.outputImage
+            request.finish(with: output!, context: nil)
+        })
+        
+        let item = AVPlayerItem(asset: asset)
+        item.videoComposition = composition
+        let player = AVPlayer(playerItem: item)
+        let newLayer = AVPlayerLayer(player: player)
+        newLayer.frame = videoPicked.frame
+        self.view.layer.addSublayer(newLayer)
+        player.play()
+        
+        print("FilteredURL: ", videoURL!)
+        
+        outputURL = videoURL
+        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
+        assetWriter?.startWriting()
+        assetWriter?.finishWriting {
+            print("outputURL: ", self.outputURL!)
+            self.videoURL = self.outputURL
+        }
+        
+        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+        print("NewFilterURL: ", videoURL!)
+    }
     
     // share video
     @IBAction func share(_ sender: UIButton) {
         
         let compressedURL = NSURL.fileURL(withPath: NSTemporaryDirectory() + NSUUID().uuidString + ".mp4")
         
-        // share options only show if an image has been chosen/taken
+        // share options only show if a video has been chosen/taken
         if videoURL != nil {
             
             // Compress video so it shares faster
             // Encode to mp4
             
     // doesn't work with filtered video?
+            
             compressVideo(inputURL: videoURL! as URL, outputURL: compressedURL) { (exportSession) in
                 guard let session = exportSession
                 else { return }
-                
+
                 // switch statement detailing the session's status
                 switch session.status {
                 case .unknown:
@@ -201,7 +307,8 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     }
     
     
-    // Video compression function - uses input and output URLs to export the session - used in the share function above
+    // Video compression function
+    // Uses input and output URLs to export the session - used in the share function above
     func compressVideo(inputURL: URL, outputURL: URL, handler:@escaping (_ exportSession: AVAssetExportSession?)-> Void) {
         let urlAsset = AVURLAsset(url: videoURL!, options: nil)
         
@@ -217,20 +324,18 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         exportSession.exportAsynchronously() {
             DispatchQueue.main.async {
                 self.exportDidFinish(exportSession)
+                self.videoURL = exportSession.outputURL
             }
         }
-        videoURL = exportSession.outputURL
     }
     
-    
+    // export finished
     func exportDidFinish(_ session: AVAssetExportSession) {
         
         guard
             session.status == AVAssetExportSessionStatus.completed,
             let outputURL = session.outputURL
-            else {
-                return
-        }
+            else { return }
         
         let saveVideoToPhotos = {
             PHPhotoLibrary.shared().performChanges({
@@ -317,40 +422,39 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
  //        }
  
  
- --- get thumbnail of video to show on main screen
- //    func getThumbnailFrom(path: URL) -> UIImage? {
- //        do {
- //            let asset = AVURLAsset(url: path , options: nil)
- //            let imgGenerator = AVAssetImageGenerator(asset: asset)
- //            imgGenerator.appliesPreferredTrackTransform = true
- //            let cgImage = try imgGenerator.copyCGImage(at: CMTimeMake(0, 1), actualTime: nil)
- //            let thumbnail = UIImage(cgImage: cgImage)
- //
- //            return thumbnail
- //        }
- //        catch let error {
- //            print("*** Error generating thumbnail: \(error.localizedDescription)")
- //            return nil
- //        }
- //    }
+--- generate thumbnail
+ func generateThumbnail(url: URL) -> UIImage? {
+ let asset = AVAsset(url: videoURL!)
+ 
+ do {
+ let imageGenerator = AVAssetImageGenerator(asset: asset)
+ imageGenerator.appliesPreferredTrackTransform = true
+ let cgImage = try imageGenerator.copyCGImage(at: kCMTimeZero, actualTime: nil)
+ return UIImage(cgImage: cgImage)
+ } catch {
+ print(error.localizedDescription)
+ 
+ return nil
+ }
+ }
 
 
  
  // previously tried code - works to compress the video, but still doesn't work with sharing a filtered video
- ////            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
- ////
- ////                switch exportSession!.status {
- ////                case .completed:
- ////                    print("Video compressed successfully")
- ////                    do {
- ////                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
- ////                        compressedURL = compressedFileData!.url
- ////                    } catch _ {
- ////                        print ("Error converting compressed file to Data")
- ////                    }
- ////                default:
- ////                    print("Could not compress video")
- ////                }
+ //            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
+ //
+ //                switch exportSession!.status {
+ //                case .completed:
+ //                    print("Video compressed successfully")
+ //                    do {
+ //                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
+ //                        compressedURL = compressedFileData!.url
+ //                    } catch _ {
+ //                        print ("Error converting compressed file to Data")
+ //                    }
+ //                default:
+ //                    print("Could not compress video")
+ //                }
  //            } )
 
  

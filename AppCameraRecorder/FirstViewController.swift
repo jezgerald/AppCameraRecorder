@@ -6,10 +6,10 @@
 //  Copyright © 2018 Jessica Fitzgerald. All rights reserved.
 //
 
-import UIKit
 import AVFoundation
-import Photos // to take photos
+import UIKit
 import AVKit
+import Photos // to take photos
 import MobileCoreServices // to access camera
 import CoreImage // to apply filters
 
@@ -121,7 +121,7 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
                 filterButton.layer.cornerRadius = 6
                 filterButton.clipsToBounds = true
                 
-                // Create filters for each button
+                // Create buttons for filters
                 let ciContext = CIContext(options: nil)
                 let coreImage = CIImage(image: currentImage)
                 let filter = CIFilter(name: "\(CIFilters[i])" )
@@ -240,6 +240,7 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         }
     }
     
+    // error message to alert user no photo selected
     func errorMessage() {
         let alertController = UIAlertController(title: "No photo selected", message: "Choose or take a photo", preferredStyle: .alert)
         let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
