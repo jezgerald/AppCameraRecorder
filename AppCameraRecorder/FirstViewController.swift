@@ -15,10 +15,9 @@ import CoreImage // to apply filters
 
 class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIScrollViewDelegate {
 
-    // outlets created for on-screen buttons, views, etc.
+    // outlets created for on-screen views
     @IBOutlet weak var imagePicked: UIImageView!
-    @IBOutlet weak var slider: UISlider!
-    @IBOutlet weak var filterButtonView: UIView!
+    @IBOutlet weak var filterButtonScroll: UIScrollView!
     
     // variables
     var currentImage : UIImage!
@@ -37,10 +36,9 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         "CIPhotoEffectMono",
         "CIColorClamp",
         "CISepiaTone",
+        "CICMYKHalftone",
         "CIGaussianBlur",
-        "CIMotionBlur",
-        "CIVibrance",
-        "CICMYKHalftone"
+        "CIMotionBlur"
     ]
     
     override func viewDidLoad() {
@@ -59,8 +57,8 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     @IBAction func recordButton(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.camera) {
             // to stop the filter showing the previous option
-            filterButtonView.isHidden = true
-            ResetImage(sender: filterButtonView)
+            filterButtonScroll.isHidden = true
+            ResetImage(sender: filterButtonScroll)
             
             // takes photo with camera & adds it to the UIView
             let imagePicker = UIImagePickerController()
@@ -75,8 +73,8 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     @IBAction func photoLibrary(_ sender: UIButton) {
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.photoLibrary){
             // to stop the filter showing the previous option
-            filterButtonView.isHidden = true
-            ResetImage(sender: filterButtonView)
+            filterButtonScroll.isHidden = true
+            ResetImage(sender: filterButtonScroll)
             
             let imagePicker = UIImagePickerController()
             imagePicker.delegate = self
@@ -88,23 +86,34 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     
     // save photo to library
     @IBAction func saveButton(_ sender: UIButton) {
-        let imageData = UIImageJPEGRepresentation(imagePicked.image!, 0)
-        let compressedJPEGImage = UIImage(data: imageData!)
-        UIImageWriteToSavedPhotosAlbum(compressedJPEGImage!, nil, nil, nil)
-        
-        saveNotice()
+        if imagePicked.image != nil {
+            let imageData = UIImageJPEGRepresentation(imagePicked.image!, 0)
+            let compressedJPEGImage = UIImage(data: imageData!)
+            UIImageWriteToSavedPhotosAlbum(compressedJPEGImage!, nil, nil, nil)
+            
+            saveNotice()
+        }
+        else { errorMessage() }
     }
     
+
     // filter options
     @IBAction func filter(_ sender: UIButton) {
 
         imagePicked.image = currentImage
-        filterButtonView.isHidden = false
+        filterButtonScroll.isHidden = false
+        filterButtonScroll.isScrollEnabled = true
+        filterButtonScroll.delegate = self
+//        filterButtonScroll.contentSize = CGSize(width: self.view.frame.size.width, height: 50)
+
+        filterButtonScroll.contentSize.height = CGFloat(45*CIFilters.count)
+        filterButtonScroll.contentSize.width = self.view.bounds.width
+        filterButtonScroll.translatesAutoresizingMaskIntoConstraints = false
         
-        var xCoord: CGFloat = 5
+        var xCoord: CGFloat = 10
         let yCoord: CGFloat = 10
-        let buttonWidth:CGFloat = 70
-        let buttonHeight:CGFloat = 70
+        let buttonWidth:CGFloat = 65
+        let buttonHeight:CGFloat = 65
         let gapBetweenButtons: CGFloat = 5
         
         var itemCount = 0
@@ -135,7 +144,8 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
                 
                 // Add Buttons in the Scroll View
                 xCoord += buttonWidth + gapBetweenButtons
-                filterButtonView.addSubview(filterButton)
+                
+                filterButtonScroll.addSubview(filterButton)
             }
         }
         else {
@@ -145,11 +155,14 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         // Resize Scroll View
         var contentRect = CGRect.zero
         
-        for view in filterButtonView.subviews {
+        for view in filterButtonScroll.subviews {
             contentRect = contentRect.union(view.frame)
         }
-        filterButtonView.sizeToFit()
-        
+
+        // change content size to scroll horizontally, and adjust behaviour so it won't automatically scroll up and down
+        filterButtonScroll.contentSize = CGSize(width: xCoord, height: filterButtonScroll.frame.height)
+        filterButtonScroll.contentInsetAdjustmentBehavior = .never
+
     }
     
     @objc func filterButtonTapped(sender: UIButton) {
@@ -175,48 +188,16 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
         picker.presentingViewController?.dismiss(animated: true, completion: nil);
     }
     
-    // change filter intensity where applicable
-    @IBAction func intensityChanged(_ sender: Any) {
-        applyProcessing()
-    }
-    
-    // process picture with applied filter
-    func applyProcessing() {
-        let inputKeys = currentFilter.inputKeys
-        let intensity = Int(slider.value)
-        
-        if inputKeys.contains(kCIInputIntensityKey) {
-            currentFilter.setValue(intensity, forKey: kCIInputIntensityKey)
-            slider.isHidden = false
-        }
-        if inputKeys.contains(kCIInputRadiusKey) {
-            currentFilter.setValue(intensity * 200, forKey: kCIInputRadiusKey)
-            slider.isHidden = false
-        }
-        if inputKeys.contains(kCIInputScaleKey) {
-            currentFilter.setValue(intensity * 100, forKey: kCIInputScaleKey)
-            slider.isHidden = false
-        }
-        if inputKeys.contains(kCIInputCenterKey) {
-            currentFilter.setValue(CIVector(x: currentImage.size.width / 2, y: currentImage.size.height / 2), forKey: kCIInputCenterKey)
-            slider.isHidden = false
-        }
-        else {
-            slider.isHidden = true
-        }
-        
-        if let cgimg = context.createCGImage(currentFilter.outputImage!, from: currentFilter.outputImage!.extent) {
-            let processedImage = UIImage(cgImage: cgimg)
-            self.imagePicked.image = processedImage
-        }
-    }
     
     // alert stating photo has saved
     func saveNotice() {
-        let alertController = UIAlertController(title: "Photo saved!", message: "Your photo was saved  successfully", preferredStyle: .alert)
-        let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-        alertController.addAction(defaultAction)
-        present(alertController, animated: true, completion: nil)
+        if imagePicked.image != nil {
+            let alertController = UIAlertController(title: "Photo saved!", message: "Your photo was saved  successfully", preferredStyle: .alert)
+            let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+            alertController.addAction(defaultAction)
+            present(alertController, animated: true, completion: nil)
+        }
+        else { errorMessage() }
     }
     
     
@@ -249,38 +230,3 @@ class FirstViewController: UIViewController, UIImagePickerControllerDelegate, UI
     }
     
 }
-
-
-// Old code
-//    @IBAction func applyFilter(sender: AnyObject) {
-//
-//        // Create an image to filter
-//        let inputImage = CIImage(image: imagePicked.image!)
-//
-//        // Create a random color to pass to a filter
-//        let randomColor = [kCIInputAngleKey: (Double(arc4random_uniform(314)) / 100)]
-//
-//        // Apply a filter to the image
-//        let filteredImage = inputImage?.applyingFilter("CIHueAdjust", parameters: randomColor)
-//
-//        // Render the filtered image
-////        let renderedImage = context.createCGImage(filteredImage!, fromRect: filteredImage!.extent())
-//
-//        // Reflect the change back in the interface
-////        imagePicked.image = UIImage(cgImage: renderedImage)
-//
-//    }
-
-//        performSegue(withIdentifier: "photoSegue", sender: self)
-
-// no longer using below as created new View instead of tab
-////FILTER IMAGE TO NEW SEGUE CONTROLLER THING: https://stackoverflow.com/questions/35020242/how-do-i-segue-an-image-to-another-viewcontroller-and-display-it-within-an-image
-//override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-//    guard let filterVC = segue.destination as? FilterViewController
-//        else { return }
-//
-//    if segue.identifier == "photoSegue" {
-//        filterVC.selectedImage = imagePicked.image!
-//        //            imagePicked.image = CIImage.applyingFilter(imagePicked)
-//    }
-//}

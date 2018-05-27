@@ -32,7 +32,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     
     // array of filters
     let CIFilters = [
-        "CISepiaTone",
         "CIPhotoEffectChrome",
         "CIPhotoEffectFade",
         "CIPhotoEffectInstant",
@@ -41,9 +40,25 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         "CIPhotoEffectTonal",
         "CIPhotoEffectTransfer",
         "CIPhotoEffectMono",
-        "CIGaussianBlur"
+        "CIColorClamp",
+        "CISepiaTone",
+        "CICMYKHalftone",
+        "CIGaussianBlur",
+        "CIMotionBlur"
     ]
     
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        
+        if videoPicked != nil {
+            pickerView.delegate = self
+            pickerView.dataSource = self
+        }
+        
+    }
+
     
     // button to record video
     @IBAction func recordButton(_ sender: UIButton) {
@@ -106,8 +121,11 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     
     // save video to library
     @IBAction func saveButton(_ sender: UIButton) {
-        // saves video to Photo Library - includes alert message
-        UISaveVideoAtPathToSavedPhotosAlbum((videoURL?.path)!, self, #selector(self.video(_:didFinishSavingWithError:contextInfo:)), nil)
+        if videoURL != nil {
+            // saves video to Photo Library - includes alert message
+            UISaveVideoAtPathToSavedPhotosAlbum((videoURL?.path)!, self, #selector(self.video(_:didFinishSavingWithError:contextInfo:)), nil)
+        }
+        else { errorNotice() }
     }
     
     
@@ -125,10 +143,13 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     
     // alert to inform user that their video has saved to their photo library
     func saveNotice() {
-        let alertController = UIAlertController(title: "Video saved!", message: "Your video was successfully saved", preferredStyle: .alert)
-        let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-        alertController.addAction(defaultAction)
-        present(alertController, animated: true, completion: nil)
+        if videoURL != nil {
+            let alertController = UIAlertController(title: "Video saved!", message: "Your video was successfully saved", preferredStyle: .alert)
+            let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+            alertController.addAction(defaultAction)
+            present(alertController, animated: true, completion: nil)
+        }
+        else { errorNotice() }
     }
 
     
@@ -139,6 +160,19 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
         alertController.addAction(defaultAction)
         present(alertController, animated: true, completion: nil)
+    }
+    
+    
+    // button to show filter options using UIPicker below
+    @IBAction func filterButton(_ sender: UIButton) {
+        
+        if videoURL != nil {
+            pickerView.isHidden = false
+            pickerLayer.frame = videoPicked.frame
+            self.view.layer.addSublayer(pickerLayer)
+        }
+        else { errorNotice() }
+        
     }
     
     
@@ -195,20 +229,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         
     }
 // end of UIPickerView
-    
-
-    // button to show filter options using UIPicker above
-    @IBAction func filterButton(_ sender: UIButton) {
-        
-        if videoURL != nil {
-            pickerView.isHidden = false
-            pickerLayer.frame = videoPicked.frame
-            self.view.layer.addSublayer(pickerLayer)
-        }
-        else { errorNotice() }
-        
-    }
-    
 
     
     // share video
@@ -317,133 +337,4 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         } else { saveVideoToPhotos() }
     }
     
-    
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        
-        pickerView.delegate = self
-        pickerView.dataSource = self
-        
-    }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-    }
-    
 }
-
-
-/* old code
-
- --- ImagePickerController function
- //        let videoType = info[UIImagePickerControllerMediaType] as? String
- //        videoType == (kUTTypeMovie as String)
- //        let videoData = AVCaptureFileOutputRecordingDelegate
- //        let url = info[UIImagePickerControllerMediaURL] as? URL
- //
- //        let player = AVPlayer(url: url?)?
- //        let vcPlayer = AVPlayerViewController()
- //        vcPlayer.player = player
- //        self.present(vcPlayer, animated: true, completion: nil)
- 
- 
- //    func fileOutput(AVCaptureOutput, didStartRecordingTo: URL, from: [AVCaptureConnection])
- //    {
- //    }
-
- --- Save button
- //        let compressedJPEGImage = UIImage(data: imageData!)
- //        UIImageWriteToSavedPhotosAlbum(compressedJPEGImage!, nil, nil, nil)
-
- 
- // (class) AVCaptureFileOutputRecordingDelegate
- // required for AVCaptureFileOutput:
- //    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
- //    }
-
- 
- --- AVPlayerViewController
- //        let vcPlayer = AVPlayerViewController()
- //        vcPlayer.player = player
- //        vcPlayer.showsPlaybackControls = true
- //        self.present(vcPlayer, animated: true, completion: nil)
- 
- 
- //        let playerViewController = AVPlayerViewController()
- //        playerViewController.player = player
- //        self.present(playerViewController, animated: true) {
- //            playerViewController.player!.play()
- //        }
- 
- 
---- generate thumbnail
- func generateThumbnail(url: URL) -> UIImage? {
- let asset = AVAsset(url: videoURL!)
- 
- do {
- let imageGenerator = AVAssetImageGenerator(asset: asset)
- imageGenerator.appliesPreferredTrackTransform = true
- let cgImage = try imageGenerator.copyCGImage(at: kCMTimeZero, actualTime: nil)
- return UIImage(cgImage: cgImage)
- } catch {
- print(error.localizedDescription)
- 
- return nil
- }
- }
-
-
- 
- // previously tried code - works to compress the video, but still doesn't work with sharing a filtered video
- //            compressVideo(inputURL: videoURL!, outputURL: compressedURL, handler: { (_ exportSession: AVAssetExportSession?) -> Void in
- //
- //                switch exportSession!.status {
- //                case .completed:
- //                    print("Video compressed successfully")
- //                    do {
- //                        compressedFileData = try Data(contentsOf: exportSession!.outputURL!)
- //                        compressedURL = compressedFileData!.url
- //                    } catch _ {
- //                        print ("Error converting compressed file to Data")
- //                    }
- //                default:
- //                    print("Could not compress video")
- //                }
- //            } )
-
- 
- 
- ------- don't even know anymore
- //        guard let outputURL = exportSession.outputURL else { return }
- //
- //        PHPhotoLibrary.requestAuthorization { status in
- //            if status == .authorized {
- //
- //                // Save the movie file to the photo library and cleanup.
- //                PHPhotoLibrary.shared().performChanges({
- //                    let options = PHAssetResourceCreationOptions()
- //                    options.shouldMoveFile = true
- //                    let creationRequest = PHAssetCreationRequest.forAsset()
- //                    creationRequest.addResource(with: .video, fileURL: outputURL, options: options)
- //                }, completionHandler: { success, error in
- //                    if !success {
- //                        guard let theError = error else { return }
- //                        print("An export error occurred: \(theError.localizedDescription)")
- //                        return
- //                    }
- //                })
- //            }
- //            else {
- //                print("Not authorized to save movie to the camera roll.")
- //                return
- //            }
- //        }
- 
- */
- 
