@@ -165,16 +165,15 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     
     // button to show filter options using UIPicker below
     @IBAction func filterButton(_ sender: UIButton) {
-        
+
         if videoURL != nil {
             pickerView.isHidden = false
             pickerLayer.frame = videoPicked.frame
             self.view.layer.addSublayer(pickerLayer)
         }
         else { errorNotice() }
-        
+
     }
-    
     
     
 // UIPickerView to choose the video's filter
@@ -210,6 +209,7 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             request.finish(with: output!, context: nil)
         })
         
+        // play video on screen with new sublayer
         let item = AVPlayerItem(asset: asset)
         item.videoComposition = composition
         let player = AVPlayer(playerItem: item)
@@ -218,14 +218,29 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
         self.view.layer.insertSublayer(playerLayer, below: pickerLayer)
         player.play()
         
-        outputURL = videoURL
-        assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
-        assetWriter?.startWriting()
-        assetWriter?.finishWriting {
-            self.videoURL = self.outputURL
+        // prepare temp file and update videoURL
+        let filePath:String =  NSTemporaryDirectory() + "temp.mov"
+        let fileManager = FileManager.default
+        
+        do {
+            try? fileManager.removeItem(atPath: filePath)
+        }
+        catch {
+            print("couldn't delete old recording")
         }
         
-        videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+        let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1920x1080)!
+        export.outputFileType = AVFileType.mp4
+        export.videoComposition = composition
+        
+        export.outputURL = NSURL(fileURLWithPath: filePath) as URL
+        print(export.outputURL?.absoluteString as Any)
+        
+        export.exportAsynchronously(completionHandler: {
+            if export.status == AVAssetExportSessionStatus.completed {
+                self.videoURL = export.outputURL!
+            }
+        })
         
     }
 // end of UIPickerView
@@ -241,9 +256,6 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
             
             // Compress video so it shares faster
             // Encode to mp4
-            
-    // doesn't work with filtered video?
-            
             compressVideo(inputURL: videoURL! as URL, outputURL: compressedURL) { (exportSession) in
                 guard let session = exportSession
                 else { return }
@@ -338,3 +350,72 @@ class SecondViewController: UIViewController, UIImagePickerControllerDelegate, U
     }
     
 }
+
+
+/* old code
+ 
+    // filter options to apply to video
+     @IBAction func filterButton(_ sender: UIButton) {
+ 
+         let filter = CIFilter(name: "CIPhotoEffectNoir")!
+ 
+         // alert user if there's no video
+         if videoURL == nil {
+             errorNotice()
+             return }
+ 
+         let asset = AVAsset(url: videoURL!)
+ 
+         let composition = AVVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
+             let source = request.sourceImage
+             filter.setValue(source, forKey: kCIInputImageKey)
+             let output = filter.outputImage
+             request.finish(with: output!, context: nil)
+         })
+ 
+         let item = AVPlayerItem(asset: asset)
+         item.videoComposition = composition
+ 
+         let player = AVPlayer(playerItem: item)
+         let newLayer = AVPlayerLayer(player: player)
+         newLayer.frame = videoPicked.frame
+         self.view.layer.addSublayer(newLayer)
+         player.play()
+ 
+         //prepaare temp file and update videoURL
+         let filePath:String =  NSTemporaryDirectory() + "temp.mov"
+         let fileManager = FileManager.default
+ 
+         do {
+             try? fileManager.removeItem(atPath: filePath)
+         }
+         catch {
+             print("couldn't delete old recording")
+         }
+ 
+         let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality)!
+         export.outputFileType = AVFileType.mov
+         export.videoComposition = composition
+ 
+         export.outputURL = NSURL(fileURLWithPath: filePath) as URL
+         print(export.outputURL?.absoluteString as Any)
+ 
+ 
+         export.exportAsynchronously(completionHandler: {
+             if export.status == AVAssetExportSessionStatus.completed {
+                 self.videoURL = export.outputURL!
+             }
+         })
+     }
+ 
+ 
+ -- for filter, in pickerview
+         outputURL = videoURL
+         assetWriter = try? AVAssetWriter(outputURL: outputURL!, fileType: AVFileType.mp4)
+         assetWriter?.startWriting()
+         assetWriter?.finishWriting {
+             self.videoURL = self.outputURL
+         }
+ 
+         videoURL = (player.currentItem?.asset as? AVURLAsset?)!?.url
+ */
